@@ -31,7 +31,6 @@ class CodeExecutionHandler(BaseHTTPRequestHandler):
         for line in code.splitlines():
             print(f">> {line}")
         if result['output']:
-            print('\n');
             print(result['output'].strip())
         elif result['error']:
             print(result['error'])

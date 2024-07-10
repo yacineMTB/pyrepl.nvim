@@ -18,7 +18,7 @@ function M.send_to_repl(code)
   })
 
   local result = vim.fn.json_decode(response.body)
-  if result.error then
+  if result.error and result.error ~= vim.NIL then
     print("Error:", result.error)
   elseif result.output then
     print("Output:", result.output)
