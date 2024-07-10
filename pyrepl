@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+import sys
+from io import StringIO
+import traceback
+
+global_scope = {}
+
+class CodeExecutionHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = json.loads(post_data.decode('utf-8'))
+        code = data.get('code', '')
+        old_stdout = sys.stdout
+        redirected_output = StringIO()
+        sys.stdout = redirected_output
+
+        try:
+            exec(code, global_scope)
+            output = redirected_output.getvalue()
+            result = {'output': output, 'error': None}
+        except Exception as e:
+            error = traceback.format_exc()
+            result = {'output': None, 'error': error}
+        finally:
+            sys.stdout = old_stdout
+        # instead, each line should have >> before it
+        for line in code.splitlines():
+            print(f">> {line}")
+        if result['output']:
+            print('\n');
+            print(result['output'].strip())
+        elif result['error']:
+            print(result['error'])
+
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(result).encode('utf-8'))
+
+    def log_message(self, format, *args):
+        pass
+
+def run_server(port=5000):
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, CodeExecutionHandler)
+    print(f"Server running on port {port}")
+    httpd.serve_forever()
+
+if __name__ == '__main__':
+    run_server()
+
