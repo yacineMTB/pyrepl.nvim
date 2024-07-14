@@ -13,7 +13,9 @@ class CodeExecutionHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         data = json.loads(post_data.decode('utf-8'))
-        code = data.get('code', '')
+
+        code = '\n'.join(data.get('code', []))
+
         old_stdout = sys.stdout
         redirected_output = StringIO()
         sys.stdout = redirected_output
@@ -27,7 +29,7 @@ class CodeExecutionHandler(BaseHTTPRequestHandler):
             result = {'output': None, 'error': error}
         finally:
             sys.stdout = old_stdout
-        # instead, each line should have >> before it
+
         for line in code.splitlines():
             print(f">> {line}")
         if result['output']:

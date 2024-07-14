@@ -18,20 +18,34 @@ function M.send_to_repl(code)
   })
 
   local result = vim.fn.json_decode(response.body)
-  if result.error and result.error ~= vim.NIL then
-    print("Error:", result.error)
-  elseif result.output then
-    print("Output:", result.output)
+end
+
+
+function M.get_visual_selection()
+  local _, srow, scol = unpack(vim.fn.getpos 'v')
+  local _, erow, ecol = unpack(vim.fn.getpos '.')
+
+  if vim.fn.mode() == 'V' then
+    if srow > erow then
+      return vim.api.nvim_buf_get_lines(0, erow - 1, srow, true)
+    else
+      return vim.api.nvim_buf_get_lines(0, srow - 1, erow, true)
+    end
   end
+
+  if vim.fn.mode() == 'v' then
+    if srow < erow or (srow == erow and scol <= ecol) then
+      return vim.api.nvim_buf_get_text(0, srow - 1, scol - 1, erow - 1, ecol, {})
+    else
+      return vim.api.nvim_buf_get_text(0, erow - 1, ecol - 1, srow - 1, scol, {})
+    end
+  end
+  return 'uhh'
 end
 
 function M.run_selected_lines()
-  local start_line = vim.fn.line("'<")
-  local end_line = vim.fn.line("'>")
-  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-  local code = table.concat(lines, "\n")
+  local code = M.get_visual_selection()
   M.send_to_repl(code)
 end
 
 return M
-
