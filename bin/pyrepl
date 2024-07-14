@@ -7,7 +7,6 @@ from io import StringIO
 import traceback
 
 global_scope = {}
-
 class CodeExecutionHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
@@ -15,6 +14,9 @@ class CodeExecutionHandler(BaseHTTPRequestHandler):
         data = json.loads(post_data.decode('utf-8'))
 
         code = '\n'.join(data.get('code', []))
+
+        for line in code.splitlines():
+            print(f">> {line}")
 
         old_stdout = sys.stdout
         redirected_output = StringIO()
@@ -30,8 +32,6 @@ class CodeExecutionHandler(BaseHTTPRequestHandler):
         finally:
             sys.stdout = old_stdout
 
-        for line in code.splitlines():
-            print(f">> {line}")
         if result['output']:
             print(result['output'].strip())
         elif result['error']:
