@@ -5,8 +5,24 @@ import json
 import sys
 from io import StringIO
 import traceback
+import threading
 
 global_scope = {}
+
+class ThreadedStdout:
+    def __init__(self, original_stdout):
+        self.original_stdout = original_stdout
+        self.redirected_output = StringIO()
+
+    def write(self, text):
+        self.original_stdout.write(text)
+        self.original_stdout.flush()
+        self.redirected_output.write(text)
+
+    def flush(self):
+        self.original_stdout.flush()
+        self.redirected_output.flush()
+
 class CodeExecutionHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
@@ -18,24 +34,19 @@ class CodeExecutionHandler(BaseHTTPRequestHandler):
         for line in code.splitlines():
             print(f">> {line}")
 
-        old_stdout = sys.stdout
-        redirected_output = StringIO()
-        sys.stdout = redirected_output
+        threaded_stdout = ThreadedStdout(sys.stdout)
+        sys.stdout = threaded_stdout
 
         try:
             exec(code, global_scope)
-            output = redirected_output.getvalue()
+            output = threaded_stdout.redirected_output.getvalue()
             result = {'output': output, 'error': None}
         except Exception as e:
             error = traceback.format_exc()
+            print(error) 
             result = {'output': None, 'error': error}
         finally:
-            sys.stdout = old_stdout
-
-        if result['output']:
-            print(result['output'].strip())
-        elif result['error']:
-            print(result['error'])
+            sys.stdout = threaded_stdout.original_stdout
 
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
@@ -53,4 +64,3 @@ def run_server(port=5000):
 
 if __name__ == '__main__':
     run_server()
-
